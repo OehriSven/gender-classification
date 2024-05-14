@@ -4,6 +4,8 @@ import torch.nn as nn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 
+import matplotlib.pyplot as plt
+
 from .neural_network import NN
 
 
@@ -15,7 +17,7 @@ class NNClassifier():
         self.optim = args.nn_optim
         self.criterion = args.nn_loss
 
-    def fit(self, X_train, y_train, X_val=None, y_val=None):
+    def fit(self, X_train, y_train, X_val=None, y_val=None, args=None):
         # Init
         if self.optim == "adam":
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -27,25 +29,54 @@ class NNClassifier():
         else:
             raise NotImplementedError(f"{self.criterion} is not implemeted.")
         
-        loss_arr = []
+        train_loss_arr = []
+        val_loss_arr = []
+        train_acc_arr = []
+        val_acc_arr = []
+        val_loss = -1
         val_acc = -1
 
         # Training
         for i in range(self.epochs):
             y_hat = self.model(X_train)
-            loss = criterion(y_hat, y_train)
-            loss_arr.append(loss)
+            train_loss = criterion(y_hat, y_train)
+            train_loss_arr.append(train_loss.item())
 
-            # Accuracy
-            train_acc = self.score(X_train, y_train)
-            if X_val is not None and y_val is not None:
-                val_acc = self.score(X_val, y_val)
+            # Validation
+            with torch.no_grad():
+                train_acc = self.score(X_train, y_train)
+                train_acc_arr.append(train_acc)
+                if X_val is not None and y_val is not None:
+                    val_loss = criterion(self.model(X_val), y_val)
+                    val_loss_arr.append(val_loss.item())
+                    val_acc = self.score(X_val, y_val)
+                    val_acc_arr.append(val_acc)
 
-            print(f'Epoch: {i} Loss: {loss:.4f} Train Acc: {train_acc:.2f} Val Acc: {val_acc:.2f}')
+
+            print(f'Epoch: {i} | Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f} | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}')
         
             optimizer.zero_grad()
-            loss.backward()
+            train_loss.backward()
             optimizer.step()
+
+        fig, ax = plt.subplots()
+        plt.plot(train_loss_arr, label="Train")
+        plt.plot(val_loss_arr, label="Validation")
+        ax.set(title="Loss", xlabel="Epoch", ylabel="Loss")
+        ax.grid(which="both")
+        ax.legend()
+        plt.savefig(f"{args.savedir}/loss.png", bbox_inches="tight")
+
+        fig, ax = plt.subplots()
+        plt.plot(train_acc_arr, label="Train")
+        plt.plot(val_acc_arr, label="Validation")
+        ax.set(title="Accuracy", xlabel="Epoch", ylabel="Accuracy")
+        ax.grid(which="both")
+        ax.legend()
+        plt.savefig(f"{args.savedir}/accuracy.png", bbox_inches="tight")
+
+        plt.close("all")
+
 
         return self.model
 
