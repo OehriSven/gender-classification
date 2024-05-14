@@ -4,11 +4,13 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, PrecisionRecallDisplay
-
+from sklearn.metrics import (
+    accuracy_score,
+    PrecisionRecallDisplay
+)
 from preprocess.preprocess import preprocess_data
 from models.models import model_dict
-from utils.utils import save_model
+from utils.utils import save_model, user_voting
 
 
 
@@ -33,6 +35,8 @@ def get_args_parser():
     parser.add_argument('--time-encod', default="sincos", type=str, help="Encoding of time features",
                         choices=["sincos", "spline"])
     parser.add_argument('--rbf', default=False, action="store_true", help="Radial Basis Function feature transformation")
+    parser.add_argument('--user-voting', default=True, action="store_false", help="Apply user voting?")
+
 
     # Target parameters
     parser.add_argument('--mean-weight', default=10, type=int, help="Weight of smoothed mean")
@@ -90,30 +94,31 @@ def main(args):
         trained_clf = clf.fit(X_train, y_train)
 
 
-    ## Save model and config ###
+    ### Save model and config ###
     print("Saving model...")
     save_model(trained_clf, args)
-
 
     ### Evaluate model ###
     print("Evaluating model...")
     train_score = clf.score(X_train, y_train)
-    print(f"Train score: {train_score:.2f}")
+    preds = clf.predict(X_val)
+    if args.user_voting:
+        preds = user_voting(preds, val_df)
 
     if args.final_test:
-        preds = clf.predict(X_val)
         preds = np.vectorize({v: k for k, v in args.label_dict.items()}.__getitem__)(preds)
-        test_df = pd.concat([test_df, pd.DataFrame({"gender": preds})], axis="columns")
-        test_df.to_csv("data/test_pred.csv", index=False)
+        val_df = pd.concat([test_df, pd.DataFrame({"gender": preds})], axis="columns")
+        val_df.to_csv("data/test_pred.csv", index=False)
     else:
-        val_score = clf.score(X_val, y_val)
-        conf_matrix = confusion_matrix(y_val, clf.predict(X_val))
+        val_score = accuracy_score(y_val, preds)
+        print(f"Train score: {train_score:.2f}")
         print(f"Validation score: {val_score:.2f}")
-        print(f"Confusion Matrix: {conf_matrix}")
-        display = PrecisionRecallDisplay.from_predictions(y_val, clf.predict(X_val), name=args.model)
-        _ = display.ax_.set_title("Gender Classification Precision Recall curve")
-        plt.show()
 
+        display = PrecisionRecallDisplay.from_predictions(y_val, preds, name=args.model)
+        _ = display.ax_.set_title("Gender Classification Precision Recall")
+        plt.savefig(f"{args.savedir}/precision_recall.png", bbox_inches="tight")
+
+        plt.close("all")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Gender Classifier', parents=[get_args_parser()])
