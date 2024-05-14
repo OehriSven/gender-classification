@@ -1,3 +1,4 @@
+import os
 import joblib
 import torch
 
@@ -9,6 +10,10 @@ from .time_transform import time_encoding
 
 
 def preprocess_data(df, args, test=False):
+    # Create encoder savedir
+    if not os.path.exists("encoder"):
+        os.makedirs("encoder")
+
     # Label transformation
     df = df.replace({"gender": args.label_dict})
 

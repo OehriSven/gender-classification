@@ -1,13 +1,14 @@
-import pickle
+import os
 import argparse
+import time
 import pandas as pd
 import numpy as np
-import torch
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, PrecisionRecallDisplay
 
 from preprocess.preprocess import preprocess_data
 from models.models import model_dict
+from utils.utils import save_model
 
 
 
@@ -15,12 +16,15 @@ from models.models import model_dict
 def get_args_parser():
     parser = argparse.ArgumentParser('Gender Classifier', add_help=False)
 
+    # Save directories
+    parser.add_argument('--savedir', default="output", type=str, help="Save directory of trained models")
+
     # General train parameters
     parser.add_argument('--label-dict', default={"m": 0, "f": 1}, type=dict, help="Label map")
     parser.add_argument('--model', default="sgd", type=str, help="Model Architecture",
                         choices=["random_forest", "sgd", "nn"])
     parser.add_argument('--final-test', default=False, action="store_true", help="Final training?")
-    parser.add_argument('--num_classes', default=2, type=int, help="Number of target classes")
+    parser.add_argument('--num-classes', default=2, type=int, help="Number of target classes")
     parser.add_argument('--epochs', default=100, type=int, help="Number of epochs")
     parser.add_argument('--lr', default=0.001, type=float, help="Initial Learning Rate")
     parser.add_argument('--norm', default=True, action="store_false", help="Apply normalization?")
@@ -47,13 +51,16 @@ def get_args_parser():
                         choices=["l2", "l1", "elasticnet"])
 
     # Neural Network parameters
-    parser.add_argument('--nn_optim', default="adam", type=str, help="Optimizer of Neural Network")
-    parser.add_argument('--nn_loss', default="cross_entropy", type=str, help="Criterion of Neural Network")
+    parser.add_argument('--nn-optim', default="adam", type=str, help="Optimizer of Neural Network")
+    parser.add_argument('--nn-loss', default="cross_entropy", type=str, help="Criterion of Neural Network")
 
     return parser
 
 
 def main(args):
+    args.savedir = os.path.join(args.savedir, time.strftime("%Y%m%d-%H%M%S"))
+    os.makedirs(args.savedir)
+
     ### Load data ###
     print("Loading data...")
     train_df, val_df, test_df = pd.read_csv("data/train.csv"), pd.read_csv("data/val.csv"), pd.read_csv("data/test.csv")
@@ -77,15 +84,15 @@ def main(args):
 
     ### Fit model ###
     print("Training model...")
-    trained_clf = clf.fit(X_train, y_train)
-
-
-    ## Save model ###
-    print("Saving model...")
     if args.model == "nn":
-        torch.save(trained_clf.state_dict(), f"pytorch_models/{args.model}_{args.cat_encod}_{args.time_encod}_{args.epochs}")
+        trained_clf = clf.fit(X_train, y_train, X_val, y_val, args)
     else:
-        pickle.dump(trained_clf, open(f"sklearn_models/{args.model}_{args.cat_encod}_{args.time_encod}_{args.epochs}.pkl", "wb"))
+        trained_clf = clf.fit(X_train, y_train)
+
+
+    ## Save model and config ###
+    print("Saving model...")
+    save_model(trained_clf, args)
 
 
     ### Evaluate model ###
@@ -103,7 +110,7 @@ def main(args):
         conf_matrix = confusion_matrix(y_val, clf.predict(X_val))
         print(f"Validation score: {val_score:.2f}")
         print(f"Confusion Matrix: {conf_matrix}")
-        display = PrecisionRecallDisplay.from_estimator(clf, X_val, y_val, name=args.model)
+        display = PrecisionRecallDisplay.from_predictions(y_val, clf.predict(X_val), name=args.model)
         _ = display.ax_.set_title("Gender Classification Precision Recall curve")
         plt.show()
 
