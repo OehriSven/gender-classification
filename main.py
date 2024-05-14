@@ -17,14 +17,17 @@ def get_args_parser():
 
     # General train parameters
     parser.add_argument('--label-dict', default={"m": 0, "f": 1}, type=dict, help="Label map")
-    parser.add_argument('--model', default="sgd", type=str, help="Model Architecture")
+    parser.add_argument('--model', default="sgd", type=str, help="Model Architecture",
+                        choices=["random_forest", "sgd", "nn"])
     parser.add_argument('--final-test', default=False, action="store_true", help="Final training?")
     parser.add_argument('--num_classes', default=2, type=int, help="Number of target classes")
     parser.add_argument('--epochs', default=100, type=int, help="Number of epochs")
     parser.add_argument('--lr', default=0.001, type=float, help="Initial Learning Rate")
     parser.add_argument('--norm', default=True, action="store_false", help="Apply normalization?")
-    parser.add_argument('--cat-encod', default="target", type=str, help="Encoding of categorical features")
-    parser.add_argument('--time-encod', default="sincos", type=str, help="Encoding of time features")
+    parser.add_argument('--cat-encod', default="target", type=str, help="Encoding of categorical features",
+                        choices=["target", "one_hot", "freq", "bin"])
+    parser.add_argument('--time-encod', default="sincos", type=str, help="Encoding of time features",
+                        choices=["sincos", "spline"])
     parser.add_argument('--rbf', default=False, action="store_true", help="Radial Basis Function feature transformation")
 
     # Target parameters
@@ -37,8 +40,11 @@ def get_args_parser():
 
 
     # SGDClassifier parameters
-    parser.add_argument('--sgd_loss', default="hinge", type=str, help="Loss function of SGD classifier")
-    parser.add_argument('--sgd_penalty', default="l2", type=str, help="Penalty type of SGD classifier")
+    parser.add_argument('--sgd_loss', default="hinge", type=str, help="Loss function of SGD classifier",
+                        choices=["hinge", "log_loss", "modified_huber", "squared_hinge", "perceptron", "squared_error",
+                                 "huber", "epsilon_insensitive", "squared_epsilon_insensitive"])
+    parser.add_argument('--sgd_penalty', default="l2", type=str, help="Penalty type of SGD classifier",
+                        choices=["l2", "l1", "elasticnet"])
 
     # Neural Network parameters
     parser.add_argument('--nn_optim', default="adam", type=str, help="Optimizer of Neural Network")
