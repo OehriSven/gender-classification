@@ -1,0 +1,2 @@
+# Data
+In order to execute the demo of the code download the training and test data [here](https://drive.google.com/drive/folders/1TlMt_qXCLjfiafHna5OYwbGKh611QQKr?usp=sharing) and place it in this directory. Then run [visualization.ipynb](../visualization.ipynb) to create a split of train and validation data.
