@@ -1,5 +1,3 @@
-data
-data/
 configs
 configs/
 output
@@ -19,6 +17,7 @@ tmp*.py
 *.pdf
 *.xls
 *.xlsx
+*.csv
 
 /*.sh
 
