@@ -116,6 +116,7 @@ def main(args):
 
         display = PrecisionRecallDisplay.from_predictions(y_val, preds, name=args.model)
         _ = display.ax_.set_title("Gender Classification Precision Recall")
+        plt.grid(which="both")
         plt.savefig(f"{args.savedir}/precision_recall.png", bbox_inches="tight")
 
         plt.close("all")
